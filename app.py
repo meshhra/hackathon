@@ -8,14 +8,17 @@ from langchain.vectorstores import FAISS
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 
+
 def user_input(user_question):
 
     prompt_template = """   
-    Your are a friendly chatbot named JURIS(Judicial Understanding & Response Intelligent System) who gives information on crime, legal and law knowledge who also tell the user to follow the law
-    you are supposed to give answers related to given context and analyze the question correctly and then give answer.If the question is related to any coding part, dont't give answer.
+    Your are a friendly chatbot named JURIS (Judicial Understanding & Response Intelligent System) who provides information on crime,
+    legal matters, and law knowledge while encouraging users to follow the law.Analyze the question correctly and provide an answer in details and in a format.
+    If the question is related to any coding or technical aspects, do not provide an answer.
     Context: {context}?
-    
+
     Question: {question}
+
     """
     embeddings = GoogleGenerativeAIEmbeddings(model = "models/embedding-001", google_api_key="AIzaSyDmFYX77xebjkZppD7FzBtf3qqqrlmAeGo")
     
@@ -33,8 +36,15 @@ def user_input(user_question):
     })
     response = model.generate_content(promt)
     #print(response.text)
-    print(response.parts)
-    return response
+    #print(response.parts)
+    #return response
+
+    # Accessing parts of the response
+    full_response = ""
+    for part in response.parts:
+        full_response += part.text
+    
+    return full_response
 
 # Set Streamlit page configuration
 st.set_page_config(page_title="JURIS")
@@ -65,10 +75,49 @@ if "messages" not in st.session_state.keys():
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
+# Use markdown with CSS to position the button
 
-#def clear_chat_history():
-#    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
-#st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
+def core():
+    if st.session_state.messages[-1]["role"] != "assistant":
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                #st.session_state.messages.append(prompt)
+                history = concatenate_chat_history(st.session_state.messages)
+                response = user_input(history)
+                placeholder = st.empty()
+                full_response = ''
+                for item in response:
+                    full_response += item
+                    placeholder.markdown(full_response)
+                placeholder.markdown(full_response)
+        message = {"role": "assistant", "content": full_response}
+        st.session_state.messages.append(message)
+
+example_prompts = [
+    "Can you give detail about my fundamental rights in india?",
+    "What are my rights if I've been arrested?",
+    "Tell me about the famous cases in India.",
+    "Explain the Constitution of India in detail",
+    "Tell me some facts related to crime in India."
+]
+# Set the width of the sidebar
+st.sidebar.title("Example Prompts")
+
+# Display buttons for each example prompt in the sidebar
+for pro in example_prompts:
+    if st.sidebar.button(pro):
+        #st.write("You selected:", prompts)
+        st.session_state.messages.append({"role": "user", "content": pro})
+        with st.chat_message("user"):
+            st.write(pro)
+        core()
+
+        # You can then pass 'prompt' as input to your chatbot function for processing
+
+st.sidebar.title("To Clear Chat History")
+def clear_chat_history():
+    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
+st.sidebar.button('Clear', on_click=clear_chat_history)
 
 
 # User-provided prompt
@@ -76,20 +125,21 @@ if prompt := st.chat_input():
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
+    core()
 
 # Generate a new response if last message is not from assistant
-if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            #st.session_state.messages.append(prompt)
-            history = concatenate_chat_history(st.session_state.messages)
-            response = user_input(history)
-            placeholder = st.empty()
-            full_response = ''
-            for item in response:
-                full_response += item.text
-                placeholder.markdown(full_response)
-            placeholder.markdown(full_response)
-    message = {"role": "assistant", "content": full_response}
-    st.session_state.messages.append(message)
+#if st.session_state.messages[-1]["role"] != "assistant":
+#    with st.chat_message("assistant"):
+#        with st.spinner("Thinking..."):
+#            #st.session_state.messages.append(prompt)
+#            history = concatenate_chat_history(st.session_state.messages)
+#            response = user_input(history)
+#            placeholder = st.empty()
+#            full_response = ''
+#            for item in response:
+#                full_response += item.text
+#                placeholder.markdown(full_response)
+#            placeholder.markdown(full_response)
+#    message = {"role": "assistant", "content": full_response}
+#    st.session_state.messages.append(message)
 
